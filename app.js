@@ -1140,7 +1140,7 @@ function exportImage(mode) {
         ctx.font = 'bold 16px "Oswald", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('CGHXST.GITHUB.IO/FNSPRITES', canvasW / 2, canvasH - layout.border - layout.footerH / 2);
+        ctx.fillText('staticvacant.github.io/fnsprites/', canvasW / 2, canvasH - layout.border - layout.footerH / 2);
 
         // Download
         const link = document.createElement('a');
