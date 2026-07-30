@@ -1523,28 +1523,29 @@ function bindEvents() {
    =================================================== */
 
 function init() {
-    if (typeof baseSprites === 'undefined') {
-        console.error('baseSprites is not defined.');
-        return;
-    }
-
-    const params = new URLSearchParams(location.search);
-    const shareCode = params.get('c');
+    // Check for shared URL code
+    const urlParams = new URLSearchParams(window.location.search);
+    const shareCode = urlParams.get('c');
 
     if (shareCode) {
         state.viewMode = true;
+        dom.viewBanner.hidden = false;
         const decoded = decompressCollection(baseSprites, shareCode);
         state.obtained = decoded.obtained;
         state.mastered = decoded.mastered;
-        dom.viewBanner.hidden = false;
     } else {
         load();
     }
 
     populateThemeFilter();
     applyStateToDOM();
-    renderGrid();
     bindEvents();
+    renderGrid();
 }
 
-init();
+// Run initialization on DOM load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
