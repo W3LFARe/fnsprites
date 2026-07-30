@@ -480,6 +480,36 @@ function renderGrid() {
     updateProgress();
 }
 
+function updateCardElement(card, sprite) {
+    const obtained = isObtained(sprite.id);
+    const mastered = isMastered(sprite.id);
+
+    // Update class list without replacing the element
+    card.classList.toggle('obtained', obtained);
+    card.classList.toggle('mastered', mastered);
+    card.setAttribute('aria-pressed', String(obtained));
+    card.setAttribute('aria-label', `${obtained ? 'Remove' : 'Mark'} ${sprite.name} ${obtained ? 'from' : 'as part of'} your collection`);
+
+    // Inner HTML swap for the badge/crowns
+    card.innerHTML = buildCardHTML(sprite, obtained, mastered);
+
+    // Refit name text for just this specific card
+    const span = card.querySelector('.card-name span');
+    if (span) fitSingleCardName(span);
+}
+
+function fitSingleCardName(span) {
+    const parent = span.parentElement;
+    if (!parent || parent.clientWidth === 0) return;
+    let size = 14;
+    span.style.fontSize = size + 'px';
+    while (span.scrollWidth > parent.clientWidth && size > 8) {
+        size -= 0.5;
+        span.style.fontSize = size + 'px';
+    }
+}
+
+
 function buildCardHTML(sprite, obtained, mastered) {
     const rarityLabel = sprite.rarity === 'Mythic' ? 'MYTHIC' : sprite.rarity.toUpperCase();
     const imgPath = `sprites/${encodeURIComponent(sprite.id)}.png`;
@@ -539,7 +569,17 @@ function toggleObtained(id) {
         state.obtained.push(id);
     }
     saveCollection();
-    renderGrid();
+
+    // If an active status filter or 'Hide Mastered' is hiding/showing cards, re-render the grid.
+    if (state.filters.status !== 'all' || state.settings.hideMastered) {
+        renderGrid();
+    } else {
+        // Otherwise, perform a lag-free, instant update on the targeted card
+        const card = dom.grid.querySelector(`.card[data-id="${id}"]`);
+        const sprite = baseSprites.find(s => s.id === id);
+        if (card && sprite) updateCardElement(card, sprite);
+        updateProgress();
+    }
 }
 
 function toggleMastery(id) {
@@ -550,7 +590,15 @@ function toggleMastery(id) {
         state.mastered.push(id);
     }
     saveCollection();
-    renderGrid();
+
+    if (state.settings.hideMastered) {
+        renderGrid();
+    } else {
+        const card = dom.grid.querySelector(`.card[data-id="${id}"]`);
+        const sprite = baseSprites.find(s => s.id === id);
+        if (card && sprite) updateCardElement(card, sprite);
+        updateProgress();
+    }
 }
 
 /* ===================================================
