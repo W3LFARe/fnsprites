@@ -936,11 +936,13 @@ function exportImage(mode) {
         const useCompactHeader = canvasW < layout.compactHeaderW;
         const headerH = useCompactHeader ? layout.compactHeaderH : layout.headerH;
         const canvasH = layout.border * 2 + headerH + layout.colHeaderH + rowsH + layout.footerH;
-
+         
+        const scale = 3; 
         const canvas = document.createElement('canvas');
+        canvas.width = totalWidth * scale;
+        canvas.height = totalHeight * scale;
         const ctx = canvas.getContext('2d');
-        canvas.width = canvasW;
-        canvas.height = canvasH;
+        ctx.scale(scale, scale); 
 
         // Border gradient
         let borderGrad;
