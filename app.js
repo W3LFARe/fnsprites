@@ -499,10 +499,21 @@ function updateCardElement(card, sprite) {
 }
 
 function fitSingleCardName(span) {
-    const parent = span.parentElement;
+const parent = span.parentElement;
     if (!parent || parent.clientWidth === 0) return;
+
+    // Ensure parent container height is explicitly set so it doesn't shrink
+    if (!parent.style.height) {
+        parent.style.height = '28px'; // Set to your original target height
+        parent.style.display = 'flex';
+        parent.style.align-items = 'center';
+        parent.style.justify-content = 'center';
+    }
+
     let size = 14;
     span.style.fontSize = size + 'px';
+    
+    // Scale font down if needed without changing line height/container height
     while (span.scrollWidth > parent.clientWidth && size > 8) {
         size -= 0.5;
         span.style.fontSize = size + 'px';
