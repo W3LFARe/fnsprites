@@ -107,7 +107,7 @@ const baseSprites = [
     { id: "grim_gold", name: "Gold Grim", theme: "Gold", rarity: "Special", unreleased: false },
     { id: "grim_candy", name: "Gummy Grim", theme: "Candy", rarity: "Special", unreleased: false },
     { id: "grim_galaxy", name: "Galaxy Grim", theme: "Galaxy", rarity: "Special", unreleased: false },
-	{ id: "grim_gem", name: "Gem Grim", theme: "Gem", rarity: "Special", unreleased: false },
+	{ id: "grim_gem", name: "Gem Grim", theme: "Gem", rarity: "Special", unreleased: true },
 	{ id: "grim_holofoil", name: "Holofoil Grim", theme: "Holofoil", rarity: "Special", unreleased: false },
 	{ id: "grim_rift", name: "Cube Grim", theme: "Cube", rarity: "Special", unreleased: false },
 
@@ -141,7 +141,7 @@ const baseSprites = [
 	{ id: "llama_gold", name: "Gold Llama", theme: "Gold", rarity: "Special", unreleased: false },
     { id: "llama_candy", name: "Gummy Llama", theme: "Candy", rarity: "Special", unreleased: false },
     { id: "llama_galaxy", name: "Galaxy Llama", theme: "Galaxy", rarity: "Special", unreleased: false },
-    { id: "llama_gem", name: "Gem Llama", theme: "Gem", rarity: "Special", unreleased: false },
+    { id: "llama_gem", name: "Gem Llama", theme: "Gem", rarity: "Special", unreleased: true },
     //	{ id: "llama_holofoil", name: "Holofoil Llama", theme: "Holofoil", rarity: "Special", unreleased: false },
 	//	{ id: "llama_rift", name: "Cube Llama", theme: "Cube", rarity: "Special", unreleased: false },
 	
@@ -154,7 +154,7 @@ const baseSprites = [
 	//	{ id: "peely_rift", name: "Cube Peely", theme: "Cube", rarity: "Special", unreleased: false },
 
 	
-	{ id: "ironmouse_basic", name: "Ironmouse", theme: "Basic", rarity: "Mythic", unreleased: false },
+	{ id: "ironmouse_basic", name: "Ironmouse", theme: "Basic", rarity: "Mythic", unreleased: true },
 	
 	{ id: "wick_basic", name: "John Wick", theme: "Basic", rarity: "Mythic", unreleased: false },
 
