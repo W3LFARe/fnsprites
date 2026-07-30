@@ -937,10 +937,20 @@ function exportImage(mode) {
         const headerH = useCompactHeader ? layout.compactHeaderH : layout.headerH;
         const canvasH = layout.border * 2 + headerH + layout.colHeaderH + rowsH + layout.footerH;
          
+
+        const scale = 2;
         const canvas = document.createElement('canvas');
-        canvas.width = totalWidth;
-        canvas.height = totalHeight;
+        canvas.width = canvasW * scale;
+        canvas.height = canvasH * scale;
+
         const ctx = canvas.getContext('2d');
+
+        // Scale all drawing operations so your layout code stays unchanged
+        ctx.scale(scale, scale);
+
+        // Enable high-quality image smoothing
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
         // Border gradient
         let borderGrad;
