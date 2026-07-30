@@ -480,47 +480,6 @@ function renderGrid() {
     updateProgress();
 }
 
-function updateCardElement(card, sprite) {
-    const obtained = isObtained(sprite.id);
-    const mastered = isMastered(sprite.id);
-
-    // Update class list without replacing the element
-    card.classList.toggle('obtained', obtained);
-    card.classList.toggle('mastered', mastered);
-    card.setAttribute('aria-pressed', String(obtained));
-    card.setAttribute('aria-label', `${obtained ? 'Remove' : 'Mark'} ${sprite.name} ${obtained ? 'from' : 'as part of'} your collection`);
-
-    // Inner HTML swap for the badge/crowns
-    card.innerHTML = buildCardHTML(sprite, obtained, mastered);
-
-    // Refit name text for just this specific card
-    const span = card.querySelector('.card-name span');
-    if (span) fitSingleCardName(span);
-}
-
-function fitSingleCardName(span) {
-const parent = span.parentElement;
-    if (!parent || parent.clientWidth === 0) return;
-
-    // Ensure parent container height is explicitly set so it doesn't shrink
-    if (!parent.style.height) {
-        parent.style.height = '28px'; // Set to your original target height
-        parent.style.display = 'flex';
-        parent.style.align-items = 'center';
-        parent.style.justify-content = 'center';
-    }
-
-    let size = 14;
-    span.style.fontSize = size + 'px';
-    
-    // Scale font down if needed without changing line height/container height
-    while (span.scrollWidth > parent.clientWidth && size > 8) {
-        size -= 0.5;
-        span.style.fontSize = size + 'px';
-    }
-}
-
-
 function buildCardHTML(sprite, obtained, mastered) {
     const rarityLabel = sprite.rarity === 'Mythic' ? 'MYTHIC' : sprite.rarity.toUpperCase();
     const imgPath = `sprites/${encodeURIComponent(sprite.id)}.png`;
@@ -580,17 +539,7 @@ function toggleObtained(id) {
         state.obtained.push(id);
     }
     saveCollection();
-
-    // If an active status filter or 'Hide Mastered' is hiding/showing cards, re-render the grid.
-    if (state.filters.status !== 'all' || state.settings.hideMastered) {
-        renderGrid();
-    } else {
-        // Otherwise, perform a lag-free, instant update on the targeted card
-        const card = dom.grid.querySelector(`.card[data-id="${id}"]`);
-        const sprite = baseSprites.find(s => s.id === id);
-        if (card && sprite) updateCardElement(card, sprite);
-        updateProgress();
-    }
+    renderGrid();
 }
 
 function toggleMastery(id) {
@@ -601,15 +550,7 @@ function toggleMastery(id) {
         state.mastered.push(id);
     }
     saveCollection();
-
-    if (state.settings.hideMastered) {
-        renderGrid();
-    } else {
-        const card = dom.grid.querySelector(`.card[data-id="${id}"]`);
-        const sprite = baseSprites.find(s => s.id === id);
-        if (card && sprite) updateCardElement(card, sprite);
-        updateProgress();
-    }
+    renderGrid();
 }
 
 /* ===================================================
@@ -1523,29 +1464,28 @@ function bindEvents() {
    =================================================== */
 
 function init() {
-    // Check for shared URL code
-    const urlParams = new URLSearchParams(window.location.search);
-    const shareCode = urlParams.get('c');
+    if (typeof baseSprites === 'undefined') {
+        console.error('baseSprites is not defined.');
+        return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const shareCode = params.get('c');
 
     if (shareCode) {
         state.viewMode = true;
-        dom.viewBanner.hidden = false;
         const decoded = decompressCollection(baseSprites, shareCode);
         state.obtained = decoded.obtained;
         state.mastered = decoded.mastered;
+        dom.viewBanner.hidden = false;
     } else {
         load();
     }
 
     populateThemeFilter();
     applyStateToDOM();
-    bindEvents();
     renderGrid();
+    bindEvents();
 }
 
-// Run initialization on DOM load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+init();

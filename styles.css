@@ -475,10 +475,6 @@ a { color: var(--mastered); }
     opacity: 0.8;
     filter: brightness(0.9) saturate(0.75);
     transition: opacity var(--ease), filter var(--ease), transform var(--ease), box-shadow var(--ease);
-
-    content-visibility: auto;          /* Skips rendering off-screen cards until scrolled into view */
-    contain-intrinsic-size: 110px 160px; /* Estimated height/width of card to prevent scrollbar jumping */
-    transform: translateZ(0);          /* Promotes card to a hardware-accelerated GPU layer */
 }
 
 .card:hover {
@@ -513,7 +509,6 @@ a { color: var(--mastered); }
     justify-content: center;
     position: relative;
     overflow: hidden;
-    will-change: transform; /* Caches gradient layers on GPU */
 }
 
 .card-display::before {
