@@ -960,33 +960,83 @@ function drawRoundRect(ctx, x, y, width, height, radius) {
     }
 }
 
+/**
+ * Dynamic canvas layout calculations to target a square output (1:1 aspect ratio)
+ */
+function calculateSquareGrid(itemCount, cardW, cardH, gap, headerH, footerH, padding) {
+    let bestCols = Math.ceil(Math.sqrt(itemCount));
+    let bestDiff = Infinity;
+
+    // Search for column count that brings canvas height closest to width
+    for (let cols = 1; cols <= itemCount; cols++) {
+        const rows = Math.ceil(itemCount / cols);
+        const w = cols * cardW + (cols - 1) * gap + padding * 2;
+        const h = headerH + rows * (cardH + gap) + footerH + padding * 2;
+        const diff = Math.abs(w - h);
+
+        if (diff < bestDiff) {
+            bestDiff = diff;
+            bestCols = cols;
+        }
+    }
+
+    const cols = Math.max(1, bestCols);
+    const rows = Math.ceil(itemCount / cols);
+    const canvasW = cols * cardW + (cols - 1) * gap + padding * 2;
+    const canvasH = headerH + rows * (cardH + gap) + footerH + padding * 2;
+
+    return { cols, rows, canvasW, canvasH };
+}
+
 function exportImage(mode) {
     const config = getExportConfig(mode);
     if (!config) return;
 
-    const releasedSprites = getReleasedSprites();
+    // Include released sprites + any unreleased sprites that are collected/mastered
+    const baseList = config.items || [];
+    const itemsToRender = baseList.filter(sprite => {
+        if (!sprite.unreleased) return true;
+        return isObtained(sprite.id) || isMastered(sprite.id);
+    });
 
-    // IF RENDER GRID IS DISABLED: Export simple grid without row/column headers
+    if (itemsToRender.length === 0) {
+        toast('No sprites available to export!', 'error');
+        return;
+    }
+
+    const cardW = 90;
+    const cardH = 112;
+    const gap = 12;
+    const padding = 20;
+    const headerH = 90;
+    const footerH = 50;
+
+    // Apply active user theme/sort filters if present
+    if (state.filters && state.filters.sortBy === 'theme') {
+        itemsToRender.sort((a, b) => (a.theme || '').localeCompare(b.theme || ''));
+    }
+
+    toast('Generating image export...', 'info');
+
+    // IF RENDER GRID IS DISABLED: Render framed square export
     if (!state.settings.renderGrid) {
-        const itemsToRender = config.items;
-        const cardsPerRow = 6;
-        const cardW = 90;
-        const cardH = 112;
-        const gap = 12;
-        const padding = 20;
-        const headerH = 90;
-        const footerH = 50;
-
-        const totalRows = Math.ceil(itemsToRender.length / cardsPerRow);
-        const canvasW = cardsPerRow * cardW + (cardsPerRow - 1) * gap + padding * 2;
-        const canvasH = headerH + totalRows * (cardH + gap) + footerH + padding * 2;
+        const { cols, rows, canvasW, canvasH } = calculateSquareGrid(
+            itemsToRender.length,
+            cardW,
+            cardH,
+            gap,
+            headerH,
+            footerH,
+            padding
+        );
 
         const imagesToLoad = [
             { id: 'mascot', src: 'siteimages/staticsprite.png' },
-            ...itemsToRender.map(sprite => ({ id: sprite.id, src: `sprites/${encodeURIComponent(sprite.id)}.png` })),
+            ...itemsToRender.map(sprite => ({
+                id: sprite.id,
+                src: `sprites/${encodeURIComponent(sprite.id)}.png`
+            }))
         ];
-
-        toast('Generating image export...', 'info');
 
         Promise.all(imagesToLoad.map(loadImage)).then(loadedImages => {
             const imageMap = {};
@@ -1001,20 +1051,29 @@ function exportImage(mode) {
             const ctx = canvas.getContext('2d');
             ctx.scale(scale, scale);
 
-            // Background
+            // Frame / Canvas Background
             ctx.fillStyle = '#0b0d13';
             ctx.fillRect(0, 0, canvasW, canvasH);
 
-            // Title
-            ctx.fillStyle = config.color;
+            // Title & Collection Stats Header
+            ctx.fillStyle = config.color || '#ffffff';
             ctx.font = 'italic 900 22px "Oswald", sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(`${config.titleL1} ${config.titleL2}`, canvasW / 2, padding + 40);
+            ctx.fillText(`${config.titleL1 || ''} ${config.titleL2 || ''}`.trim(), canvasW / 2, padding + 30);
 
-            // Draw cards directly in rows and columns
+            const counts = getCollectionCounts(itemsToRender);
+            ctx.fillStyle = '#a0a5b5';
+            ctx.font = '500 13px "Inter", sans-serif';
+            ctx.fillText(
+                `Collected: ${counts.collected}/${counts.total}  •  Mastered: ${counts.mastered}/${counts.total}`,
+                canvasW / 2,
+                padding + 55
+            );
+
+            // Draw Cards
             itemsToRender.forEach((sprite, i) => {
-                const col = i % cardsPerRow;
-                const row = Math.floor(i / cardsPerRow);
+                const col = i % cols;
+                const row = Math.floor(i / cols);
                 const x = padding + col * (cardW + gap);
                 const y = padding + headerH + row * (cardH + gap);
 
@@ -1022,17 +1081,23 @@ function exportImage(mode) {
                 drawMiniCard(ctx, sprite, x, y, cardW, cardH, cardState, imageMap);
             });
 
-            // Save / Open image
+            // Footer / Branding
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '500 12px "Inter", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('made by rick', canvasW / 2, canvasH - padding - 10);
+
+            // Export Output
             const shouldOpenInNewTab = isIOS() || state.settings.openExports;
             if (shouldOpenInNewTab) {
-                canvas.toBlob((blob) => {
+                canvas.toBlob(blob => {
                     if (!blob) return toast('Failed to generate image', 'error');
                     window.open(URL.createObjectURL(blob), '_blank');
                     toast('Image opened in new tab!', 'success');
                 }, 'image/png');
             } else {
                 const link = document.createElement('a');
-                link.download = `${config.filename}.png`;
+                link.download = `${config.filename || 'export'}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
                 toast('Image exported successfully!', 'success');
