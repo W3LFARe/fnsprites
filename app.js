@@ -353,11 +353,19 @@ function getTradeThemeLabel(theme) {
     return TRADE_THEME_LABELS[theme] || theme;
 }
 
-function getCollectionCounts(sprites = getReleasedSprites()) {
+function getCollectionCounts(sprites = baseSprites) {
+    // Total only includes officially released sprites
+    const released = sprites.filter(sprite => !sprite.unreleased);
+    const total = released.length;
+
+    // Counts include all obtained/mastered sprites (including unreleased ones)
+    const collected = sprites.filter(sprite => isObtained(sprite.id)).length;
+    const mastered = sprites.filter(sprite => isMastered(sprite.id)).length;
+
     return {
-        total: sprites.length,
-        collected: sprites.filter(sprite => isObtained(sprite.id)).length,
-        mastered: sprites.filter(sprite => isMastered(sprite.id)).length,
+        total,
+        collected,
+        mastered,
     };
 }
 
@@ -953,56 +961,86 @@ function drawRoundRect(ctx, x, y, width, height, radius) {
 }
 
 function exportImage(mode) {
-
-   if (!state.settings.renderGrid) {
-       // Render in direct flow layout when Render Grid is OFF
-       const itemsToRender = config.items;
-       const cardsPerRow = 6;
-       const cardW = 90;
-       const cardH = 112;
-       const gap = 12;
-       const padding = 20;
-       const headerH = 90;
-       const footerH = 50;
-   
-       const totalRows = Math.ceil(itemsToRender.length / cardsPerRow);
-       const canvasW = cardsPerRow * cardW + (cardsPerRow - 1) * gap + padding * 2;
-       const canvasH = headerH + totalRows * (cardH + gap) + footerH + padding * 2;
-   
-       const scale = 2;
-       const canvas = document.createElement('canvas');
-       canvas.width = canvasW * scale;
-       canvas.height = canvasH * scale;
-       const ctx = canvas.getContext('2d');
-       ctx.scale(scale, scale);
-   
-       ctx.fillStyle = '#0b0d13';
-       ctx.fillRect(0, 0, canvasW, canvasH);
-   
-       ctx.fillStyle = config.color;
-       ctx.font = 'italic 900 22px "Oswald", sans-serif';
-       ctx.textAlign = 'center';
-       ctx.fillText(`${config.titleL1} ${config.titleL2}`, canvasW / 2, padding + 40);
-   
-       itemsToRender.forEach((sprite, i) => {
-           const col = i % cardsPerRow;
-           const row = Math.floor(i / cardsPerRow);
-           const x = padding + col * (cardW + gap);
-           const y = padding + headerH + row * (cardH + gap);
-   
-           const cardState = getExportCardState(sprite, mode);
-           drawMiniCard(ctx, sprite, x, y, cardW, cardH, cardState, imageMap);
-       });
-   
-       // Save or open canvas logic...
-       saveOrOpenExportCanvas(canvas);
-       return;
-    }
-   
     const config = getExportConfig(mode);
     if (!config) return;
 
     const releasedSprites = getReleasedSprites();
+
+    // IF RENDER GRID IS DISABLED: Export simple grid without row/column headers
+    if (!state.settings.renderGrid) {
+        const itemsToRender = config.items;
+        const cardsPerRow = 6;
+        const cardW = 90;
+        const cardH = 112;
+        const gap = 12;
+        const padding = 20;
+        const headerH = 90;
+        const footerH = 50;
+
+        const totalRows = Math.ceil(itemsToRender.length / cardsPerRow);
+        const canvasW = cardsPerRow * cardW + (cardsPerRow - 1) * gap + padding * 2;
+        const canvasH = headerH + totalRows * (cardH + gap) + footerH + padding * 2;
+
+        const imagesToLoad = [
+            { id: 'mascot', src: 'siteimages/staticsprite.png' },
+            ...itemsToRender.map(sprite => ({ id: sprite.id, src: `sprites/${encodeURIComponent(sprite.id)}.png` })),
+        ];
+
+        toast('Generating image export...', 'info');
+
+        Promise.all(imagesToLoad.map(loadImage)).then(loadedImages => {
+            const imageMap = {};
+            loadedImages.forEach(res => {
+                if (res.success) imageMap[res.id] = res.img;
+            });
+
+            const scale = 2;
+            const canvas = document.createElement('canvas');
+            canvas.width = canvasW * scale;
+            canvas.height = canvasH * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+
+            // Background
+            ctx.fillStyle = '#0b0d13';
+            ctx.fillRect(0, 0, canvasW, canvasH);
+
+            // Title
+            ctx.fillStyle = config.color;
+            ctx.font = 'italic 900 22px "Oswald", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${config.titleL1} ${config.titleL2}`, canvasW / 2, padding + 40);
+
+            // Draw cards directly in rows and columns
+            itemsToRender.forEach((sprite, i) => {
+                const col = i % cardsPerRow;
+                const row = Math.floor(i / cardsPerRow);
+                const x = padding + col * (cardW + gap);
+                const y = padding + headerH + row * (cardH + gap);
+
+                const cardState = getExportCardState(sprite, mode);
+                drawMiniCard(ctx, sprite, x, y, cardW, cardH, cardState, imageMap);
+            });
+
+            // Save / Open image
+            const shouldOpenInNewTab = isIOS() || state.settings.openExports;
+            if (shouldOpenInNewTab) {
+                canvas.toBlob((blob) => {
+                    if (!blob) return toast('Failed to generate image', 'error');
+                    window.open(URL.createObjectURL(blob), '_blank');
+                    toast('Image opened in new tab!', 'success');
+                }, 'image/png');
+            } else {
+                const link = document.createElement('a');
+                link.download = `${config.filename}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                toast('Image exported successfully!', 'success');
+            }
+        });
+        return;
+    }
+
     const charKeys = getFamilyKeys(releasedSprites);
     const familyThemeMap = getFamilyThemeMap(releasedSprites);
     const allThemeColumns = getActiveThemes(releasedSprites).map(theme => ({
