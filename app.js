@@ -13,7 +13,6 @@ const KEYS = {
     showUnreleased: 'fn_state_unreleased',
     lowFidelity: 'fn_state_low_fidelity',
     openExports: 'fn_state_open_exports',
-    renderGrid: 'fn_state_render_grid',
 };
 
 const THEME_ORDER = ['Basic', 'Gold', 'Candy', 'Galaxy', 'Gem', 'Holofoil', 'Cube', 'Rift', 'Quack'];
@@ -59,7 +58,6 @@ const state = {
         showUnreleased: false,
         lowFidelity: false,
         openExports: false,
-        renderGrid: false,
     },
 };
 
@@ -77,8 +75,7 @@ const dom = {
     hideMastered: document.getElementById('hideMastered'),
     showUnreleased: document.getElementById('showUnreleased'),
     lowFidelity: document.getElementById('lowFidelity'),
-    openExports: document.getElementById('openExports'),
-    renderGrid: document.getElementById('renderGrid'),
+    openExports: document.getElementById('openExports'), // ADD THIS
     exportModeSwitch: document.getElementById('exportModeSwitch'),
     exportDropdown: document.getElementById('exportDropdown'),
     exportToggle: document.getElementById('exportToggle'),
@@ -155,7 +152,6 @@ function load() {
     state.settings.showUnreleased = localStorage.getItem(KEYS.showUnreleased) === 'true';
     state.settings.lowFidelity = localStorage.getItem(KEYS.lowFidelity) === 'true';
     state.settings.openExports = localStorage.getItem(KEYS.openExports) === 'true';
-    state.settings.renderGrid = localStorage.getItem(KEYS.renderGrid) === 'true';
 }
 
 function applyStateToDOM() {
@@ -178,7 +174,6 @@ function applyStateToDOM() {
         }
 
 
-    if (dom.renderGrid) dom.renderGrid.checked = state.settings.renderGrid;
    
     dom.statusPills.querySelectorAll('.pill').forEach(pill => {
         const match =
@@ -409,12 +404,7 @@ function filterSprites() {
 
     return baseSprites.filter(sprite => {
         if (state.settings.hideMastered && isMastered(sprite.id)) return false;
-        // Keep unreleased sprites visible if obtained or mastered, even if showUnreleased is toggled off
-        const owned = isObtained(sprite.id);
-        const mastered = isMastered(sprite.id);
-        if (!state.settings.showUnreleased && sprite.unreleased && !owned && !mastered) {
-            return false;
-        }
+        if (!state.settings.showUnreleased && sprite.unreleased) return false;
         if (state.viewMode && (!isObtained(sprite.id) || sprite.unreleased)) return false;
 
         const matchesSearch = !search || sprite.name.toLowerCase().includes(search);
@@ -518,27 +508,14 @@ function buildCardHTML(sprite, obtained, mastered) {
     const safeName = escapeHTML(sprite.name);
     const safeRarity = escapeHTML(rarityLabel);
 
-      let badge = '';
-      const isUnreleased = sprite.unreleased;
-      
-      if (isUnreleased && mastered) {
-          badge = '<div class="card-badge unreleased-mastered-badge">Mastered</div>';
-      } else if (isUnreleased && obtained) {
-          badge = '<div class="card-badge unreleased-collected-badge">Collected</div>';
-      } else if (isUnreleased) {
-          badge = '<div class="card-badge unreleased-badge">Unreleased</div>';
-      } else if (mastered) {
-          badge = '<div class="card-badge mastered-badge">Mastered</div>';
-      } else if (obtained) {
-          badge = '<div class="card-badge collected">Collected</div>';
-      }
-      
-      // Push candy cane classes for unreleased cards that are obtained/mastered
-      if (isUnreleased && mastered) {
-          classes.push('unreleased-mastered');
-      } else if (isUnreleased && obtained) {
-          classes.push('unreleased-collected');
-      }
+    let badge = '';
+    if (sprite.unreleased) {
+        badge = '<div class="card-badge unreleased-badge">Unreleased</div>';
+    } else if (mastered) {
+        badge = '<div class="card-badge mastered-badge">Mastered</div>';
+    } else if (obtained) {
+        badge = '<div class="card-badge collected">Collected</div>';
+    }
 
     let crownAction = '';
     if (obtained && !mastered && !state.viewMode) {
@@ -892,34 +869,9 @@ function drawMiniCard(ctx, sprite, x, y, w, h, cardState, imageMap) {
     ctx.fillStyle = bottomAccentColor;
     ctx.fillRect(x, y + h - 3, w, 3);
 
-       // Helper to generate candy cane pattern on canvas
-      function getCandyPattern(c1, c2) {
-          const pCanvas = document.createElement('canvas');
-          pCanvas.width = 16;
-          pCanvas.height = 16;
-          const pCtx = pCanvas.getContext('2d');
-      
-          pCtx.fillStyle = c1;
-          pCtx.fillRect(0, 0, 16, 16);
-          pCtx.fillStyle = c2;
-          pCtx.beginPath();
-          pCtx.moveTo(0, 16); pCtx.lineTo(16, 0); pCtx.lineTo(8, 0); pCtx.lineTo(0, 8);
-          pCtx.moveTo(8, 16); pCtx.lineTo(16, 8); pCtx.lineTo(16, 16);
-          pCtx.fill();
-      
-          return ctx.createPattern(pCanvas, 'repeat');
-      }
-      
-      if (sprite.unreleased && (cardState.isMastered || cardState.isOwned)) {
-          const color1 = '#ef4444';
-          const color2 = cardState.isMastered ? '#ffd700' : '#22c55e';
-          ctx.strokeStyle = getCandyPattern(color1, color2);
-          ctx.lineWidth = 3;
-      } else {
-          ctx.strokeStyle = borderColor;
-          ctx.lineWidth = isMastered ? 2 : 1;
-      }
-      ctx.stroke();
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = isMastered ? 2 : 1;
+    ctx.beginPath();
     drawRoundRect(ctx, x, y, w, h, 8);
     ctx.stroke();
 
@@ -952,52 +904,6 @@ function drawRoundRect(ctx, x, y, width, height, radius) {
 }
 
 function exportImage(mode) {
-
-   if (!state.settings.renderGrid) {
-       // Render in direct flow layout when Render Grid is OFF
-       const itemsToRender = config.items;
-       const cardsPerRow = 6;
-       const cardW = 90;
-       const cardH = 112;
-       const gap = 12;
-       const padding = 20;
-       const headerH = 90;
-       const footerH = 50;
-   
-       const totalRows = Math.ceil(itemsToRender.length / cardsPerRow);
-       const canvasW = cardsPerRow * cardW + (cardsPerRow - 1) * gap + padding * 2;
-       const canvasH = headerH + totalRows * (cardH + gap) + footerH + padding * 2;
-   
-       const scale = 2;
-       const canvas = document.createElement('canvas');
-       canvas.width = canvasW * scale;
-       canvas.height = canvasH * scale;
-       const ctx = canvas.getContext('2d');
-       ctx.scale(scale, scale);
-   
-       ctx.fillStyle = '#0b0d13';
-       ctx.fillRect(0, 0, canvasW, canvasH);
-   
-       ctx.fillStyle = config.color;
-       ctx.font = 'italic 900 22px "Oswald", sans-serif';
-       ctx.textAlign = 'center';
-       ctx.fillText(`${config.titleL1} ${config.titleL2}`, canvasW / 2, padding + 40);
-   
-       itemsToRender.forEach((sprite, i) => {
-           const col = i % cardsPerRow;
-           const row = Math.floor(i / cardsPerRow);
-           const x = padding + col * (cardW + gap);
-           const y = padding + headerH + row * (cardH + gap);
-   
-           const cardState = getExportCardState(sprite, mode);
-           drawMiniCard(ctx, sprite, x, y, cardW, cardH, cardState, imageMap);
-       });
-   
-       // Save or open canvas logic...
-       saveOrOpenExportCanvas(canvas);
-       return;
-    }
-   
     const config = getExportConfig(mode);
     if (!config) return;
 
@@ -1463,7 +1369,7 @@ function bindEvents() {
     });
 
     /* Toggle switches */
-    const switchKeys = ['hideMastered', 'showUnreleased', 'lowFidelity', 'openExports', 'renderGrid'];
+    const switchKeys = ['hideMastered', 'showUnreleased', 'lowFidelity', 'openExports'];
     switchKeys.forEach(key => {
         dom[key].addEventListener('change', () => {
             if (key === 'openExports') {
