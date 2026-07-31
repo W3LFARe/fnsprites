@@ -494,6 +494,14 @@ function renderGrid() {
         const classes = ['card', `rarity-${sprite.rarity}`, `theme-${sprite.theme}`];
         if (obtained) classes.push('obtained');
         if (mastered) classes.push('mastered');
+
+        // Add candy-cane classes here where `classes` exists
+        if (sprite.unreleased && mastered) {
+            classes.push('unreleased-mastered');
+        } else if (sprite.unreleased && obtained) {
+            classes.push('unreleased-collected');
+        }
+
         card.className = classes.join(' ');
         if (!state.viewMode) {
             card.tabIndex = 0;
@@ -518,27 +526,20 @@ function buildCardHTML(sprite, obtained, mastered) {
     const safeName = escapeHTML(sprite.name);
     const safeRarity = escapeHTML(rarityLabel);
 
-      let badge = '';
-      const isUnreleased = sprite.unreleased;
+    let badge = '';
+    const isUnreleased = sprite.unreleased;
       
-      if (isUnreleased && mastered) {
-          badge = '<div class="card-badge unreleased-mastered-badge">Mastered</div>';
-      } else if (isUnreleased && obtained) {
-          badge = '<div class="card-badge unreleased-collected-badge">Collected</div>';
-      } else if (isUnreleased) {
-          badge = '<div class="card-badge unreleased-badge">Unreleased</div>';
-      } else if (mastered) {
-          badge = '<div class="card-badge mastered-badge">Mastered</div>';
-      } else if (obtained) {
-          badge = '<div class="card-badge collected">Collected</div>';
-      }
-      
-      // Push candy cane classes for unreleased cards that are obtained/mastered
-      if (isUnreleased && mastered) {
-          classes.push('unreleased-mastered');
-      } else if (isUnreleased && obtained) {
-          classes.push('unreleased-collected');
-      }
+    if (isUnreleased && mastered) {
+        badge = '<div class="card-badge unreleased-mastered-badge">Mastered</div>';
+    } else if (isUnreleased && obtained) {
+        badge = '<div class="card-badge unreleased-collected-badge">Collected</div>';
+    } else if (isUnreleased) {
+        badge = '<div class="card-badge unreleased-badge">Unreleased</div>';
+    } else if (mastered) {
+        badge = '<div class="card-badge mastered-badge">Mastered</div>';
+    } else if (obtained) {
+        badge = '<div class="card-badge collected">Collected</div>';
+    }
 
     let crownAction = '';
     if (obtained && !mastered && !state.viewMode) {
