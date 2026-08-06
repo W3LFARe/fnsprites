@@ -835,8 +835,8 @@ body.low-fidelity .rarity-Special .card-rarity { background: #51f7cc; }
 /* Season tag */
 .card-season {
     position: absolute;
-    bottom: 3px;
-    right: 3px;
+    bottom: 2px;
+    right: 2px;
     z-index: 3;
     height: 20px;
     display: flex;
