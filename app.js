@@ -550,7 +550,7 @@ function buildCardHTML(sprite, obtained, mastered) {
             <img src="${imgPath}" alt="${safeName}" loading="lazy">
             <div class="card-rarity">${safeRarity}</div>
             <div class="card-season" title="${safeSeasonName}">
-                <img src="${seasonData.img}" alt="${safeSeasonName}">
+                <img src="${seasonData.img}" alt="${safeSeasonName}" title="${safeSeasonName}">
             </div>
         </div>
         <div class="card-name"><span>${safeName}</span></div>`;
