@@ -156,5 +156,4 @@ const baseSprites = [
 	{ id: "ironmouse_basic", name: "Ironmouse", theme: "Basic", rarity: "Mythic", unreleased: false, season: "Runners" },
 	
 	{ id: "wick_basic", name: "John Wick", theme: "Basic", rarity: "Mythic", unreleased: false, season: "Runners" },
-
 ];
