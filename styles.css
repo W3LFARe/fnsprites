@@ -831,3 +831,20 @@ body.low-fidelity .rarity-Special .card-rarity { background: #51f7cc; }
         transform: none;
     }
 }
+
+/* Season tag */
+.card-season {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 3;
+    height: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.card-season img {
+    height: 100%;
+    width: auto;
+    object-fit: contain;
+}
