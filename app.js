@@ -1550,22 +1550,7 @@ if (importDiscordBtn) {
         const text = prompt("Paste your 'Copy for Discord' table from SpriteLocker:");
         if (!text) return;
 
-        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-        let themes = [];
-
-        // Extract theme headers from the top table row
-        for (const line of lines) {
-            if (line.includes('|NORMAL|') || line.includes('NORMAL')) {
-                themes = line.split('|').map(s => s.trim()).filter(Boolean);
-                break;
-            }
-        }
-
-        if (themes.length === 0) {
-            themes = ['NORMAL', 'GOLD', 'GUMMY', 'GALAXY', 'GEM', 'HOLOFOIL', 'CUBE', 'QUACK'];
-        }
-
-        // Map SpriteLocker header names to fnsprites theme aliases
+        const defaultThemes = ['NORMAL', 'GOLD', 'GUMMY', 'GALAXY', 'GEM', 'HOLOFOIL', 'CUBE', 'QUACK'];
         const themeAliasMap = {
             'NORMAL': ['normal', 'basic', 'default'],
             'GOLD': ['gold'],
@@ -1579,44 +1564,58 @@ if (importDiscordBtn) {
 
         const obtainedPairs = [];
 
-        // Process rows (looking for ✅ Have and 👻 Lost icons)
-        lines.forEach(line => {
-            if (!line.includes('|') || line.includes('---') || line.includes('collected')) return;
+        // Captures any character up to the first '|', allowing names with '.', ''', spaces, or hyphens
+        const rowRegex = /([^|\r\n]+?)\s*\|((?:\s*[✅👻❌🚫]\s*\|)+)/g;
+        let match;
 
-            const parts = line.split('|').map(p => p.trim());
-            const spriteName = parts[0]?.toLowerCase();
-            const cells = parts.slice(1);
+        while ((match = rowRegex.exec(text)) !== null) {
+            // Clean up non-breaking spaces (\u00A0) and regular spaces
+            const rawName = match[1].replace(/[\u00A0\s]+/g, ' ').trim().toLowerCase();
 
-            if (!spriteName) return;
+            // Skip table header and legend rows
+            if (
+                rawName.includes('have') || 
+                rawName.includes('lost') || 
+                rawName.includes('need') || 
+                rawName.includes('available') || 
+                rawName.includes('normal')
+            ) {
+                continue;
+            }
+
+            const cells = match[2].split('|').map(c => c.trim()).filter(Boolean);
 
             cells.forEach((cell, idx) => {
-                if (idx < themes.length) {
+                if (idx < defaultThemes.length) {
+                    // Counts ✅ (Have) and 👻 (Lost/Resummon) as collected
                     if (cell.includes('✅') || cell.includes('👻')) {
-                        const rawTheme = themes[idx].toUpperCase();
+                        const themeName = defaultThemes[idx];
                         obtainedPairs.push({
-                            sprite: spriteName,
-                            themeAliases: themeAliasMap[rawTheme] || [rawTheme.toLowerCase()]
+                            sprite: rawName,
+                            themeAliases: themeAliasMap[themeName] || [themeName.toLowerCase()]
                         });
                     }
                 }
             });
-        });
+        }
 
         if (obtainedPairs.length === 0) {
             toast('No valid collection data found in table text', 'error');
             return;
         }
 
-        // Match extracted sprite/theme pairs to baseSprites array IDs
+        // Match pairs against baseSprites data
         const importedIds = [];
         if (typeof baseSprites !== 'undefined') {
             baseSprites.forEach(item => {
-                const sName = (item.sprite || item.name || '').toLowerCase();
-                const sTheme = (item.theme || item.rarity || '').toLowerCase();
+                const sName = (item.sprite || item.name || '').toLowerCase().trim();
+                const sTheme = (item.theme || item.rarity || '').toLowerCase().trim();
 
-                const isMatch = obtainedPairs.some(pair => 
-                    pair.sprite === sName && pair.themeAliases.includes(sTheme)
-                );
+                const isMatch = obtainedPairs.some(pair => {
+                    const nameMatch = sName === pair.sprite || sName.includes(pair.sprite) || pair.sprite.includes(sName);
+                    const themeMatch = pair.themeAliases.some(alias => sTheme === alias || sTheme.includes(alias) || alias.includes(sTheme));
+                    return nameMatch && themeMatch;
+                });
 
                 if (isMatch) {
                     importedIds.push(item.id);
