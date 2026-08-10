@@ -1576,21 +1576,23 @@ if (importDiscordBtn) {
         if (!text) return;
 
         const defaultThemes = ['NORMAL', 'GOLD', 'GUMMY', 'GALAXY', 'GEM', 'HOLOFOIL', 'CUBE', 'QUACK'];
+        
+        // Expanded theme aliases to match baseSprites metadata
         const themeAliasMap = {
-            'NORMAL': ['normal', 'basic', 'default'],
+            'NORMAL': ['normal', 'basic', 'default', 'standard'],
             'GOLD': ['gold'],
-            'GUMMY': ['gummy', 'candy'],
-            'GALAXY': ['galaxy'],
-            'GEM': ['gem'],
-            'HOLOFOIL': ['holofoil'],
-            'CUBE': ['cube'],
-            'QUACK': ['quack']
+            'GUMMY': ['gummy', 'candy', 'sweet'],
+            'GALAXY': ['galaxy', 'cosmic'],
+            'GEM': ['gem', 'crystal'],
+            'HOLOFOIL': ['holofoil', 'holo', 'foil'],
+            'CUBE': ['cube', 'dark', 'kevin'],
+            'QUACK': ['quack', 'duck']
         };
 
         const cleanStr = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         const obtainedPairs = [];
 
-        // Captures row name up to the first '|' and all emoji status cells
+        // Parse row names and status cells
         const rowRegex = /([^|\r\n]+?)\s*\|((?:\s*[✅👻❌🚫]\s*\|)+)/g;
         let match;
 
@@ -1598,7 +1600,6 @@ if (importDiscordBtn) {
             const rawName = match[1].replace(/[\u00A0\s]+/g, ' ').trim();
             const cleanedName = cleanStr(rawName);
 
-            // Skip table headers and legend rows
             if (
                 !cleanedName ||
                 cleanedName.includes('have') ||
@@ -1614,7 +1615,6 @@ if (importDiscordBtn) {
 
             cells.forEach((cell, idx) => {
                 if (idx < defaultThemes.length) {
-                    // Counts ✅ (Have) and 👻 (Lost/Resummon) as collected
                     if (cell.includes('✅') || cell.includes('👻')) {
                         const themeName = defaultThemes[idx];
                         const aliases = (themeAliasMap[themeName] || [themeName]).map(cleanStr);
@@ -1632,21 +1632,30 @@ if (importDiscordBtn) {
             return;
         }
 
-        // Match pairs against baseSprites data with normalized string matching
+        // Broadened matching logic for shorthand names and themes
         const importedIds = [];
         if (typeof baseSprites !== 'undefined') {
             baseSprites.forEach(item => {
                 const sName = cleanStr(item.sprite || item.name);
+                const sId = cleanStr(String(item.id || ''));
                 const sTheme = cleanStr(item.theme || item.rarity || 'basic');
 
                 const isMatch = obtainedPairs.some(pair => {
-                    const nameMatch = sName === pair.cleanName || 
-                                       sName.includes(pair.cleanName) || 
-                                       pair.cleanName.includes(sName);
+                    // Check if sprite name or ID matches full/partial name
+                    const nameMatch = 
+                        sName === pair.cleanName || 
+                        sName.includes(pair.cleanName) || 
+                        pair.cleanName.includes(sName) ||
+                        sId.includes(pair.cleanName) ||
+                        pair.cleanName.includes(sId);
 
+                    // Check if theme matches any alias
                     const themeMatch = pair.cleanAliases.some(alias => 
-                        sTheme === alias || sTheme.includes(alias) || alias.includes(sTheme) || 
-                        (alias === 'normal' && sTheme === 'basic')
+                        sTheme === alias || 
+                        sTheme.includes(alias) || 
+                        alias.includes(sTheme) ||
+                        sId.includes(alias) ||
+                        (alias === 'normal' && (sTheme === 'basic' || sTheme === 'default'))
                     );
 
                     return nameMatch && themeMatch;
@@ -1664,7 +1673,7 @@ if (importDiscordBtn) {
         state.obtained = newObtained;
         saveCollection();
         renderGrid();
-        toast(`Imported ${newObtained.length} total sprites from Discord table!`, 'success');
+        toast(`Successfully imported ${importedIds.length} sprites from Discord table!`, 'success');
     });
 }
 
