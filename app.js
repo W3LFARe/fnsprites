@@ -1577,20 +1577,32 @@ if (importDiscordBtn) {
 
         const defaultThemes = ['NORMAL', 'GOLD', 'GUMMY', 'GALAXY', 'GEM', 'HOLOFOIL', 'CUBE', 'QUACK'];
         
-        // Expanded theme aliases to match baseSprites metadata
-        const themeAliasMap = {
-            'NORMAL': ['normal', 'basic', 'default', 'standard'],
-            'GOLD': ['gold'],
-            'GUMMY': ['gummy', 'candy', 'sweet'],
-            'GALAXY': ['galaxy', 'cosmic'],
-            'GEM': ['gem', 'crystal'],
-            'HOLOFOIL': ['holofoil', 'holo', 'foil'],
-            'CUBE': ['cube', 'dark', 'kevin'],
-            'QUACK': ['quack', 'duck']
+        // Exact mappings to the ID suffixes used in your JSON
+        const themeMap = {
+            'NORMAL': 'basic',
+            'GOLD': 'gold',
+            'GUMMY': 'candy',
+            'GALAXY': 'galaxy',
+            'GEM': 'gem',
+            'HOLOFOIL': 'holofoil',
+            'CUBE': 'cube',
+            'QUACK': 'quack'
+        };
+
+        // Exact mappings to the ID prefixes used in your JSON
+        const nameMap = {
+            'lootinllama': 'llama',
+            'peekypeely': 'peely',
+            'burntpeanut': 'theburntpeanut',
+            'johnwick': 'wick',
+            'vinijr': 'vini',
+            'grimreaper': 'grim',
+            'zeropoint': 'zeropoint'
         };
 
         const cleanStr = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const obtainedPairs = [];
+        const importedIds = [];
+        const validIds = getSpriteIdSet();
 
         // Parse row names and status cells
         const rowRegex = /([^|\r\n]+?)\s*\|((?:\s*[✅👻❌🚫]\s*\|)+)/g;
@@ -1598,8 +1610,9 @@ if (importDiscordBtn) {
 
         while ((match = rowRegex.exec(text)) !== null) {
             const rawName = match[1].replace(/[\u00A0\s]+/g, ' ').trim();
-            const cleanedName = cleanStr(rawName);
+            let cleanedName = cleanStr(rawName);
 
+            // Skip headers
             if (
                 !cleanedName ||
                 cleanedName.includes('have') ||
@@ -1611,63 +1624,41 @@ if (importDiscordBtn) {
                 continue;
             }
 
+            // Apply specific name mappings for multi-word or special sprites
+            if (nameMap[cleanedName]) {
+                cleanedName = nameMap[cleanedName];
+            }
+
             const cells = match[2].split('|').map(c => c.trim()).filter(Boolean);
 
             cells.forEach((cell, idx) => {
                 if (idx < defaultThemes.length) {
                     if (cell.includes('✅') || cell.includes('👻')) {
-                        const themeName = defaultThemes[idx];
-                        const aliases = (themeAliasMap[themeName] || [themeName]).map(cleanStr);
-                        obtainedPairs.push({
-                            cleanName: cleanedName,
-                            cleanAliases: aliases
-                        });
+                        const rawTheme = defaultThemes[idx];
+                        const mappedTheme = themeMap[rawTheme];
+                        
+                        // Construct the exact ID format (e.g., "earth_basic", "peely_basic")
+                        const expectedId = `${cleanedName}_${mappedTheme}`;
+                        
+                        if (validIds.has(expectedId)) {
+                            importedIds.push(expectedId);
+                        } else {
+                            // Fallback: If exact ID construction misses, find closest valid ID
+                            const fallbackMatch = Array.from(validIds).find(id => 
+                                id.includes(cleanedName) && id.includes(mappedTheme)
+                            );
+                            if (fallbackMatch) importedIds.push(fallbackMatch);
+                        }
                     }
                 }
             });
         }
 
-        if (obtainedPairs.length === 0) {
+        if (importedIds.length === 0) {
             toast('No valid collection data found in table text', 'error');
             return;
         }
 
-        // Broadened matching logic for shorthand names and themes
-        const importedIds = [];
-        if (typeof baseSprites !== 'undefined') {
-            baseSprites.forEach(item => {
-                const sName = cleanStr(item.sprite || item.name);
-                const sId = cleanStr(String(item.id || ''));
-                const sTheme = cleanStr(item.theme || item.rarity || 'basic');
-
-                const isMatch = obtainedPairs.some(pair => {
-                    // Check if sprite name or ID matches full/partial name
-                    const nameMatch = 
-                        sName === pair.cleanName || 
-                        sName.includes(pair.cleanName) || 
-                        pair.cleanName.includes(sName) ||
-                        sId.includes(pair.cleanName) ||
-                        pair.cleanName.includes(sId);
-
-                    // Check if theme matches any alias
-                    const themeMatch = pair.cleanAliases.some(alias => 
-                        sTheme === alias || 
-                        sTheme.includes(alias) || 
-                        alias.includes(sTheme) ||
-                        sId.includes(alias) ||
-                        (alias === 'normal' && (sTheme === 'basic' || sTheme === 'default'))
-                    );
-
-                    return nameMatch && themeMatch;
-                });
-
-                if (isMatch) {
-                    importedIds.push(item.id);
-                }
-            });
-        }
-
-        const validIds = getSpriteIdSet();
         const newObtained = uniqueValidIds([...state.obtained, ...importedIds], validIds);
 
         state.obtained = newObtained;
