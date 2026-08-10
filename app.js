@@ -1495,7 +1495,7 @@ function bindEvents() {
         setDropdownOpen(dom.exportDropdown, dom.exportToggle, false);
     });
 
-    /* Backup Import */
+    /* Backup Import (Supports both IDs and SpriteLocker JSON) */
     dom.importBtn.addEventListener('click', () => {
         if (state.viewMode) {
             toast('Cannot import in view-only mode!', 'error');
@@ -1512,15 +1512,40 @@ function bindEvents() {
         reader.onload = (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                if (!data || !Array.isArray(data.obtained) || !Array.isArray(data.mastered)) {
+                if (!data || !Array.isArray(data.obtained)) {
                     throw new Error('Invalid backup file format');
                 }
 
+                const importedIds = [];
+
+                // Convert string keys ("water_basic") or numeric IDs into valid baseSprites IDs
+                data.obtained.forEach(item => {
+                    if (typeof item === 'number') {
+                        importedIds.push(item);
+                    } else if (typeof item === 'string') {
+                        const parts = item.split('_');
+                        const rawName = parts[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const rawTheme = (parts[1] || 'basic').toLowerCase();
+
+                        if (typeof baseSprites !== 'undefined') {
+                            const match = baseSprites.find(s => {
+                                const sName = (s.sprite || s.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                const sTheme = (s.theme || s.rarity || 'basic').toLowerCase();
+                                return (sName === rawName || sName.includes(rawName) || rawName.includes(sName)) &&
+                                       (sTheme === rawTheme || sTheme.includes(rawTheme) || (rawTheme === 'basic' && sTheme === 'normal'));
+                            });
+
+                            if (match) importedIds.push(match.id);
+                        }
+                    }
+                });
+
                 const validIds = getSpriteIdSet();
-                const obtained = uniqueValidIds(data.obtained, validIds);
+                const obtained = uniqueValidIds(importedIds, validIds);
                 const obtainedIds = new Set(obtained);
-                const mastered = uniqueValidIds(data.mastered, validIds)
-                    .filter(id => obtainedIds.has(id));
+                const mastered = Array.isArray(data.mastered)
+                    ? uniqueValidIds(data.mastered, validIds).filter(id => obtainedIds.has(id))
+                    : [];
 
                 state.obtained = obtained;
                 state.mastered = mastered;
@@ -1538,7 +1563,7 @@ function bindEvents() {
         reader.readAsText(file);
     });
 
-/* Discord Import */
+    /* Discord Import */
 const importDiscordBtn = dom.importDiscordBtn || document.getElementById('importDiscordBtn');
 if (importDiscordBtn) {
     importDiscordBtn.addEventListener('click', () => {
