@@ -1657,21 +1657,6 @@ if (importDiscordBtn) {
                 }
             });
         }
-
-        if (importedIds.length === 0) {
-            toast('No valid collection data found in table text', 'error');
-            return;
-        }
-
-        const validIds = getSpriteIdSet();
-        const newObtained = uniqueValidIds([...state.obtained, ...importedIds], validIds);
-
-        state.obtained = newObtained;
-        saveCollection();
-        renderGrid();
-        toast(`Successfully imported ${newObtained.length} total sprites from Discord table!`, 'success');
-    });
-}
 /* ===================================================
    Initialization
    =================================================== */
