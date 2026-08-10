@@ -1538,33 +1538,101 @@ function bindEvents() {
         reader.readAsText(file);
     });
 
-    /* Discord Import */
-    const importDiscordBtn = dom.importDiscordBtn || document.getElementById('importDiscordBtn');
-    if (importDiscordBtn) {
-        importDiscordBtn.addEventListener('click', () => {
-            if (state.viewMode) {
-                toast('Cannot import in view-only mode!', 'error');
-                return;
+/* Discord Import */
+const importDiscordBtn = dom.importDiscordBtn || document.getElementById('importDiscordBtn');
+if (importDiscordBtn) {
+    importDiscordBtn.addEventListener('click', () => {
+        if (state.viewMode) {
+            toast('Cannot import in view-only mode!', 'error');
+            return;
+        }
+
+        const text = prompt("Paste your 'Copy for Discord' table from SpriteLocker:");
+        if (!text) return;
+
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        let themes = [];
+
+        // Extract theme headers from the top table row
+        for (const line of lines) {
+            if (line.includes('|NORMAL|') || line.includes('NORMAL')) {
+                themes = line.split('|').map(s => s.trim()).filter(Boolean);
+                break;
             }
+        }
 
-            const text = prompt("Paste your 'Copy for Discord' text from SpriteLocker:");
-            if (!text) return;
+        if (themes.length === 0) {
+            themes = ['NORMAL', 'GOLD', 'GUMMY', 'GALAXY', 'GEM', 'HOLOFOIL', 'CUBE', 'QUACK'];
+        }
 
-            const rawIds = text.match(/\d+/g)?.map(Number) || [];
-            if (rawIds.length === 0) {
-                toast('No valid sprite IDs found in text', 'error');
-                return;
-            }
+        // Map SpriteLocker header names to fnsprites theme aliases
+        const themeAliasMap = {
+            'NORMAL': ['normal', 'basic', 'default'],
+            'GOLD': ['gold'],
+            'GUMMY': ['gummy', 'candy'],
+            'GALAXY': ['galaxy'],
+            'GEM': ['gem'],
+            'HOLOFOIL': ['holofoil'],
+            'CUBE': ['cube'],
+            'QUACK': ['quack']
+        };
 
-            const validIds = getSpriteIdSet();
-            const newObtained = uniqueValidIds([...state.obtained, ...rawIds], validIds);
+        const obtainedPairs = [];
 
-            state.obtained = newObtained;
-            saveCollection();
-            renderGrid();
-            toast(`Imported ${newObtained.length} sprites into collection!`, 'success');
+        // Process rows (looking for ✅ Have and 👻 Lost icons)
+        lines.forEach(line => {
+            if (!line.includes('|') || line.includes('---') || line.includes('collected')) return;
+
+            const parts = line.split('|').map(p => p.trim());
+            const spriteName = parts[0]?.toLowerCase();
+            const cells = parts.slice(1);
+
+            if (!spriteName) return;
+
+            cells.forEach((cell, idx) => {
+                if (idx < themes.length) {
+                    if (cell.includes('✅') || cell.includes('👻')) {
+                        const rawTheme = themes[idx].toUpperCase();
+                        obtainedPairs.push({
+                            sprite: spriteName,
+                            themeAliases: themeAliasMap[rawTheme] || [rawTheme.toLowerCase()]
+                        });
+                    }
+                }
+            });
         });
-    }
+
+        if (obtainedPairs.length === 0) {
+            toast('No valid collection data found in table text', 'error');
+            return;
+        }
+
+        // Match extracted sprite/theme pairs to baseSprites array IDs
+        const importedIds = [];
+        if (typeof baseSprites !== 'undefined') {
+            baseSprites.forEach(item => {
+                const sName = (item.sprite || item.name || '').toLowerCase();
+                const sTheme = (item.theme || item.rarity || '').toLowerCase();
+
+                const isMatch = obtainedPairs.some(pair => 
+                    pair.sprite === sName && pair.themeAliases.includes(sTheme)
+                );
+
+                if (isMatch) {
+                    importedIds.push(item.id);
+                }
+            });
+        }
+
+        const validIds = getSpriteIdSet();
+        const newObtained = uniqueValidIds([...state.obtained, ...importedIds], validIds);
+
+        state.obtained = newObtained;
+        saveCollection();
+        renderGrid();
+        toast(`Imported ${importedIds.length} sprites from Discord table!`, 'success');
+    });
+}
 
     /* Copy trade list */
     dom.copyTradeTextBtn.addEventListener('click', () => {
