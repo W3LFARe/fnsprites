@@ -1577,33 +1577,52 @@ if (importDiscordBtn) {
 
         const defaultThemes = ['NORMAL', 'GOLD', 'GUMMY', 'GALAXY', 'GEM', 'HOLOFOIL', 'CUBE', 'QUACK'];
         
-        // Aliases to match whatever theme ID variant exists in baseSprites
-        const themeAliasesMap = {
-            'NORMAL': ['basic', 'normal', 'default'],
-            'GOLD': ['gold'],
-            'GUMMY': ['candy', 'gummy', 'sweet'],
-            'GALAXY': ['galaxy', 'cosmic'],
-            'GEM': ['gem', 'crystal'],
-            'HOLOFOIL': ['holofoil', 'holo', 'foil'],
-            'CUBE': ['cube', 'dark', 'kevin'],
-            'QUACK': ['quack', 'duck']
+        // Exact theme suffix map matching your app's ID keys
+        const themeMap = {
+            'NORMAL': 'basic',
+            'GOLD': 'gold',
+            'GUMMY': 'candy',
+            'GALAXY': 'galaxy',
+            'GEM': 'gem',
+            'HOLOFOIL': 'holofoil',
+            'CUBE': 'cube',
+            'QUACK': 'quack'
         };
 
-        // Aliases for multi-word or special sprite names
-        const nameAliasesMap = {
-            'lootinllama': ['llama', 'lootinllama'],
-            'peekypeely': ['peely', 'peekypeely'],
-            'burntpeanut': ['theburntpeanut', 'burntpeanut', 'peanut'],
-            'johnwick': ['wick', 'johnwick'],
-            'vinijr': ['vini', 'vinijr'],
-            'grimreaper': ['grim', 'grimreaper', 'reaper'],
-            'zeropoint': ['zeropoint', 'zero']
+        // Exact sprite prefix map matching your app's ID keys
+        const nameMap = {
+            'water': 'water',
+            'earth': 'earth',
+            'fire': 'fire',
+            'fishy': 'fishy',
+            'air': 'air',
+            'duck': 'duck',
+            'ghost': 'ghost',
+            'demon': 'demon',
+            'king': 'king',
+            'aura': 'aura',
+            'striker': 'striker',
+            'dream': 'dream',
+            'punk': 'punk',
+            'boss': 'boss',
+            'seven': 'seven',
+            'peekypeely': 'peely',
+            'lootinllama': 'llama',
+            'batman': 'batman',
+            'grimreaper': 'grim',
+            'zeropoint': 'zeropoint',
+            'burntpeanut': 'theburntpeanut',
+            'vinijr': 'vini',
+            'pollo': 'pollo',
+            'johnwick': 'wick',
+            'ironmouse': 'ironmouse'
         };
 
         const cleanStr = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         const importedIds = [];
+        const validIds = getSpriteIdSet();
 
-        // Parse rows and status cells
+        // Parse row names and status cells
         const rowRegex = /([^|\r\n]+?)\s*\|((?:\s*[✅👻❌🚫]\s*\|)+)/g;
         let match;
 
@@ -1611,6 +1630,7 @@ if (importDiscordBtn) {
             const rawName = match[1].replace(/[\u00A0\s]+/g, ' ').trim();
             const cleanedName = cleanStr(rawName);
 
+            // Skip headers
             if (
                 !cleanedName ||
                 cleanedName.includes('have') ||
@@ -1622,36 +1642,27 @@ if (importDiscordBtn) {
                 continue;
             }
 
-            const nameAliases = nameAliasesMap[cleanedName] || [cleanedName];
+            const mappedName = nameMap[cleanedName] || cleanedName;
             const cells = match[2].split('|').map(c => c.trim()).filter(Boolean);
 
             cells.forEach((cell, idx) => {
                 if (idx < defaultThemes.length) {
                     if (cell.includes('✅') || cell.includes('👻')) {
                         const rawTheme = defaultThemes[idx];
-                        const themeAliases = themeAliasesMap[rawTheme] || [rawTheme.toLowerCase()];
+                        const mappedTheme = themeMap[rawTheme] || rawTheme.toLowerCase();
+                        
+                        // Construct exact ID (e.g. "water_quack", "earth_cube", "peely_holofoil")
+                        const targetId = `${mappedName}_${mappedTheme}`;
 
-                        if (typeof baseSprites !== 'undefined') {
-                            // Find matching sprite in baseSprites array
-                            const matchedSprite = baseSprites.find(s => {
+                        if (validIds.has(targetId)) {
+                            importedIds.push(targetId);
+                        } else if (typeof baseSprites !== 'undefined') {
+                            // Fallback lookup in baseSprites array
+                            const found = baseSprites.find(s => {
                                 const sId = cleanStr(String(s.id || ''));
-                                const sName = cleanStr(s.sprite || s.name || '');
-                                const sTheme = cleanStr(s.theme || s.rarity || '');
-
-                                const nameMatch = nameAliases.some(alias => 
-                                    sId.includes(alias) || sName.includes(alias) || alias.includes(sName)
-                                );
-
-                                const themeMatch = themeAliases.some(alias => 
-                                    sId.includes(alias) || sTheme.includes(alias) || alias.includes(sTheme)
-                                );
-
-                                return nameMatch && themeMatch;
+                                return sId.includes(mappedName) && sId.includes(mappedTheme);
                             });
-
-                            if (matchedSprite) {
-                                importedIds.push(matchedSprite.id);
-                            }
+                            if (found) importedIds.push(found.id);
                         }
                     }
                 }
@@ -1663,7 +1674,6 @@ if (importDiscordBtn) {
             return;
         }
 
-        const validIds = getSpriteIdSet();
         const newObtained = uniqueValidIds([...state.obtained, ...importedIds], validIds);
 
         state.obtained = newObtained;
