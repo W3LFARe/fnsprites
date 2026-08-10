@@ -1672,6 +1672,9 @@ if (importDiscordBtn) {
         toast(`Successfully imported ${newObtained.length} total sprites from Discord table!`, 'success');
     });
 }
+
+} 
+
 /* ===================================================
    Initialization
    =================================================== */
