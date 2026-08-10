@@ -1577,42 +1577,40 @@ if (importDiscordBtn) {
 
         const defaultThemes = ['NORMAL', 'GOLD', 'GUMMY', 'GALAXY', 'GEM', 'HOLOFOIL', 'CUBE', 'QUACK'];
         
-        // Exact mappings to the ID suffixes used in your JSON
-        const themeMap = {
-            'NORMAL': 'basic',
-            'GOLD': 'gold',
-            'GUMMY': 'candy',
-            'GALAXY': 'galaxy',
-            'GEM': 'gem',
-            'HOLOFOIL': 'holofoil',
-            'CUBE': 'cube',
-            'QUACK': 'quack'
+        // Aliases to match whatever theme ID variant exists in baseSprites
+        const themeAliasesMap = {
+            'NORMAL': ['basic', 'normal', 'default'],
+            'GOLD': ['gold'],
+            'GUMMY': ['candy', 'gummy', 'sweet'],
+            'GALAXY': ['galaxy', 'cosmic'],
+            'GEM': ['gem', 'crystal'],
+            'HOLOFOIL': ['holofoil', 'holo', 'foil'],
+            'CUBE': ['cube', 'dark', 'kevin'],
+            'QUACK': ['quack', 'duck']
         };
 
-        // Exact mappings to the ID prefixes used in your JSON
-        const nameMap = {
-            'lootinllama': 'llama',
-            'peekypeely': 'peely',
-            'burntpeanut': 'theburntpeanut',
-            'johnwick': 'wick',
-            'vinijr': 'vini',
-            'grimreaper': 'grim',
-            'zeropoint': 'zeropoint'
+        // Aliases for multi-word or special sprite names
+        const nameAliasesMap = {
+            'lootinllama': ['llama', 'lootinllama'],
+            'peekypeely': ['peely', 'peekypeely'],
+            'burntpeanut': ['theburntpeanut', 'burntpeanut', 'peanut'],
+            'johnwick': ['wick', 'johnwick'],
+            'vinijr': ['vini', 'vinijr'],
+            'grimreaper': ['grim', 'grimreaper', 'reaper'],
+            'zeropoint': ['zeropoint', 'zero']
         };
 
         const cleanStr = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         const importedIds = [];
-        const validIds = getSpriteIdSet();
 
-        // Parse row names and status cells
+        // Parse rows and status cells
         const rowRegex = /([^|\r\n]+?)\s*\|((?:\s*[✅👻❌🚫]\s*\|)+)/g;
         let match;
 
         while ((match = rowRegex.exec(text)) !== null) {
             const rawName = match[1].replace(/[\u00A0\s]+/g, ' ').trim();
-            let cleanedName = cleanStr(rawName);
+            const cleanedName = cleanStr(rawName);
 
-            // Skip headers
             if (
                 !cleanedName ||
                 cleanedName.includes('have') ||
@@ -1624,30 +1622,36 @@ if (importDiscordBtn) {
                 continue;
             }
 
-            // Apply specific name mappings for multi-word or special sprites
-            if (nameMap[cleanedName]) {
-                cleanedName = nameMap[cleanedName];
-            }
-
+            const nameAliases = nameAliasesMap[cleanedName] || [cleanedName];
             const cells = match[2].split('|').map(c => c.trim()).filter(Boolean);
 
             cells.forEach((cell, idx) => {
                 if (idx < defaultThemes.length) {
                     if (cell.includes('✅') || cell.includes('👻')) {
                         const rawTheme = defaultThemes[idx];
-                        const mappedTheme = themeMap[rawTheme];
-                        
-                        // Construct the exact ID format (e.g., "earth_basic", "peely_basic")
-                        const expectedId = `${cleanedName}_${mappedTheme}`;
-                        
-                        if (validIds.has(expectedId)) {
-                            importedIds.push(expectedId);
-                        } else {
-                            // Fallback: If exact ID construction misses, find closest valid ID
-                            const fallbackMatch = Array.from(validIds).find(id => 
-                                id.includes(cleanedName) && id.includes(mappedTheme)
-                            );
-                            if (fallbackMatch) importedIds.push(fallbackMatch);
+                        const themeAliases = themeAliasesMap[rawTheme] || [rawTheme.toLowerCase()];
+
+                        if (typeof baseSprites !== 'undefined') {
+                            // Find matching sprite in baseSprites array
+                            const matchedSprite = baseSprites.find(s => {
+                                const sId = cleanStr(String(s.id || ''));
+                                const sName = cleanStr(s.sprite || s.name || '');
+                                const sTheme = cleanStr(s.theme || s.rarity || '');
+
+                                const nameMatch = nameAliases.some(alias => 
+                                    sId.includes(alias) || sName.includes(alias) || alias.includes(sName)
+                                );
+
+                                const themeMatch = themeAliases.some(alias => 
+                                    sId.includes(alias) || sTheme.includes(alias) || alias.includes(sTheme)
+                                );
+
+                                return nameMatch && themeMatch;
+                            });
+
+                            if (matchedSprite) {
+                                importedIds.push(matchedSprite.id);
+                            }
                         }
                     }
                 }
@@ -1659,35 +1663,15 @@ if (importDiscordBtn) {
             return;
         }
 
+        const validIds = getSpriteIdSet();
         const newObtained = uniqueValidIds([...state.obtained, ...importedIds], validIds);
 
         state.obtained = newObtained;
         saveCollection();
         renderGrid();
-        toast(`Successfully imported ${importedIds.length} sprites from Discord table!`, 'success');
+        toast(`Successfully imported ${newObtained.length} total sprites from Discord table!`, 'success');
     });
 }
-
-    /* Copy trade list */
-    dom.copyTradeTextBtn.addEventListener('click', () => {
-        copyText(generateTradeText(), 'Trade list copied to clipboard!', 'Failed to copy trade list');
-        setDropdownOpen(dom.copyDropdown, dom.copyToggle, false);
-    });
-
-    /* Copy trade grid */
-    dom.copyTradeGridBtn.addEventListener('click', () => {
-        copyText(generateTradeGridText(), 'Trade grid copied to clipboard!', 'Failed to copy trade grid');
-        setDropdownOpen(dom.copyDropdown, dom.copyToggle, false);
-    });
-
-    /* Share */
-    dom.shareBtn.addEventListener('click', () => {
-        const code = compressCollection(baseSprites, state.obtained, state.mastered);
-        const url = `${location.origin}${location.pathname}?c=${code}`;
-        copyText(url, 'Share link copied to clipboard!', 'Failed to copy link');
-    });
-}
-
 /* ===================================================
    Initialization
    =================================================== */
