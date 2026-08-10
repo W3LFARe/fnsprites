@@ -1538,6 +1538,34 @@ function bindEvents() {
         reader.readAsText(file);
     });
 
+    /* Discord Import */
+    const importDiscordBtn = dom.importDiscordBtn || document.getElementById('importDiscordBtn');
+    if (importDiscordBtn) {
+        importDiscordBtn.addEventListener('click', () => {
+            if (state.viewMode) {
+                toast('Cannot import in view-only mode!', 'error');
+                return;
+            }
+
+            const text = prompt("Paste your 'Copy for Discord' text from SpriteLocker:");
+            if (!text) return;
+
+            const rawIds = text.match(/\d+/g)?.map(Number) || [];
+            if (rawIds.length === 0) {
+                toast('No valid sprite IDs found in text', 'error');
+                return;
+            }
+
+            const validIds = getSpriteIdSet();
+            const newObtained = uniqueValidIds([...state.obtained, ...rawIds], validIds);
+
+            state.obtained = newObtained;
+            saveCollection();
+            renderGrid();
+            toast(`Imported ${newObtained.length} sprites into collection!`, 'success');
+        });
+    }
+
     /* Copy trade list */
     dom.copyTradeTextBtn.addEventListener('click', () => {
         copyText(generateTradeText(), 'Trade list copied to clipboard!', 'Failed to copy trade list');
