@@ -1587,23 +1587,25 @@ if (importDiscordBtn) {
             'QUACK': ['quack']
         };
 
+        const cleanStr = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         const obtainedPairs = [];
 
-        // Captures any character up to the first '|', allowing names with '.', ''', spaces, or hyphens
+        // Captures row name up to the first '|' and all emoji status cells
         const rowRegex = /([^|\r\n]+?)\s*\|((?:\s*[✅👻❌🚫]\s*\|)+)/g;
         let match;
 
         while ((match = rowRegex.exec(text)) !== null) {
-            // Clean up non-breaking spaces (\u00A0) and regular spaces
-            const rawName = match[1].replace(/[\u00A0\s]+/g, ' ').trim().toLowerCase();
+            const rawName = match[1].replace(/[\u00A0\s]+/g, ' ').trim();
+            const cleanedName = cleanStr(rawName);
 
-            // Skip table header and legend rows
+            // Skip table headers and legend rows
             if (
-                rawName.includes('have') || 
-                rawName.includes('lost') || 
-                rawName.includes('need') || 
-                rawName.includes('available') || 
-                rawName.includes('normal')
+                !cleanedName ||
+                cleanedName.includes('have') ||
+                cleanedName.includes('lost') ||
+                cleanedName.includes('need') ||
+                cleanedName.includes('available') ||
+                cleanedName.includes('normal')
             ) {
                 continue;
             }
@@ -1615,9 +1617,10 @@ if (importDiscordBtn) {
                     // Counts ✅ (Have) and 👻 (Lost/Resummon) as collected
                     if (cell.includes('✅') || cell.includes('👻')) {
                         const themeName = defaultThemes[idx];
+                        const aliases = (themeAliasMap[themeName] || [themeName]).map(cleanStr);
                         obtainedPairs.push({
-                            sprite: rawName,
-                            themeAliases: themeAliasMap[themeName] || [themeName.toLowerCase()]
+                            cleanName: cleanedName,
+                            cleanAliases: aliases
                         });
                     }
                 }
@@ -1629,16 +1632,23 @@ if (importDiscordBtn) {
             return;
         }
 
-        // Match pairs against baseSprites data
+        // Match pairs against baseSprites data with normalized string matching
         const importedIds = [];
         if (typeof baseSprites !== 'undefined') {
             baseSprites.forEach(item => {
-                const sName = (item.sprite || item.name || '').toLowerCase().trim();
-                const sTheme = (item.theme || item.rarity || '').toLowerCase().trim();
+                const sName = cleanStr(item.sprite || item.name);
+                const sTheme = cleanStr(item.theme || item.rarity || 'basic');
 
                 const isMatch = obtainedPairs.some(pair => {
-                    const nameMatch = sName === pair.sprite || sName.includes(pair.sprite) || pair.sprite.includes(sName);
-                    const themeMatch = pair.themeAliases.some(alias => sTheme === alias || sTheme.includes(alias) || alias.includes(sTheme));
+                    const nameMatch = sName === pair.cleanName || 
+                                       sName.includes(pair.cleanName) || 
+                                       pair.cleanName.includes(sName);
+
+                    const themeMatch = pair.cleanAliases.some(alias => 
+                        sTheme === alias || sTheme.includes(alias) || alias.includes(sTheme) || 
+                        (alias === 'normal' && sTheme === 'basic')
+                    );
+
                     return nameMatch && themeMatch;
                 });
 
@@ -1654,7 +1664,7 @@ if (importDiscordBtn) {
         state.obtained = newObtained;
         saveCollection();
         renderGrid();
-        toast(`Imported ${importedIds.length} sprites from Discord table!`, 'success');
+        toast(`Imported ${newObtained.length} total sprites from Discord table!`, 'success');
     });
 }
 
