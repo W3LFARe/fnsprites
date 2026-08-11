@@ -430,6 +430,8 @@ function filterSprites() {
             const isOwned = isObtained(sprite.id);
             if (state.filters.status === 'owned') matchesStatus = isOwned;
             if (state.filters.status === 'missing') matchesStatus = !isOwned;
+            // NEW: Added unmastered filter
+            if (state.filters.status === 'unmastered') matchesStatus = isOwned && !isMastered(sprite.id);
         }
 
         return matchesSearch && matchesTheme && matchesSeason && matchesStatus;
