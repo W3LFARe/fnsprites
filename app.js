@@ -168,14 +168,22 @@ function applyStateToDOM() {
     document.body.classList.toggle('low-fidelity', state.settings.lowFidelity);
    
     if (isIOS()) {
-            if (dom.exportModeSwitch) dom.exportModeSwitch.hidden = true;
-        } else {
-            dom.openExports.checked = !state.settings.openExports;
-            const switchLabel = dom.exportModeSwitch.querySelector('span');
-            if (switchLabel) {
-                switchLabel.textContent = dom.openExports.checked ? 'Download Exports' : 'Open Exports';
-            }
+        if (dom.exportModeSwitch) dom.exportModeSwitch.hidden = true;
+    } else {
+        dom.openExports.checked = !state.settings.openExports;
+        const switchLabel = dom.exportModeSwitch.querySelector('span');
+        if (switchLabel) {
+            switchLabel.textContent = dom.openExports.checked ? 'Download Exports' : 'Open Exports';
         }
+    }
+   
+    // NEW: Cleaned up status pills logic to automatically match the unmastered button
+    dom.statusPills.querySelectorAll('.pill').forEach(pill => {
+        const match = pill.dataset.status === state.filters.status;
+        pill.classList.toggle('active', match);
+        pill.setAttribute('aria-pressed', String(match));
+    });
+}
 
 
    
