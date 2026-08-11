@@ -177,21 +177,8 @@ function applyStateToDOM() {
         }
     }
    
-    // NEW: Cleaned up status pills logic to automatically match the unmastered button
     dom.statusPills.querySelectorAll('.pill').forEach(pill => {
         const match = pill.dataset.status === state.filters.status;
-        pill.classList.toggle('active', match);
-        pill.setAttribute('aria-pressed', String(match));
-    });
-}
-
-
-   
-    dom.statusPills.querySelectorAll('.pill').forEach(pill => {
-        const match =
-            (pill.dataset.status === 'all' && state.filters.status === 'all') ||
-            (pill.dataset.status === 'owned' && state.filters.status === 'owned') ||
-            (pill.dataset.status === 'missing' && state.filters.status === 'missing');
         pill.classList.toggle('active', match);
         pill.setAttribute('aria-pressed', String(match));
     });
