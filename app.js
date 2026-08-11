@@ -1585,7 +1585,7 @@ if (importDiscordBtn) {
             'GALAXY': 'galaxy',
             'GEM': 'gem',
             'HOLOFOIL': 'holofoil',
-            'CUBE': 'rift', // Correctly targets the _rift prefix used for Cubes
+            'CUBE': 'rift', 
             'QUACK': 'quack'
         };
 
@@ -1622,12 +1622,19 @@ if (importDiscordBtn) {
         const importedIds = [];
         const validIds = getSpriteIdSet();
 
-        // The 'u' flag at the end correctly parses 2-byte emojis like 🚫 and 👻
+        // The 'u' flag at the end correctly parses 2-byte emojis
         const rowRegex = /([^|\r\n]+?)\s*\|((?:\s*[✅👻❌🚫]\s*\|)+)/gu;
         let match;
 
         while ((match = rowRegex.exec(text)) !== null) {
-            const rawName = match[1].replace(/[\u00A0\s]+/g, ' ').trim();
+            let rawName = match[1];
+
+            // FIX: Safely un-glue the first row if the browser's prompt box stripped out newlines
+            if (rawName.includes('--')) {
+                rawName = rawName.split(/--+/).pop();
+            }
+
+            rawName = rawName.replace(/[\u00A0\s]+/g, ' ').trim();
             const cleanedName = cleanStr(rawName);
 
             // Skip headers
@@ -1651,13 +1658,11 @@ if (importDiscordBtn) {
                         const rawTheme = defaultThemes[idx];
                         const mappedTheme = themeMap[rawTheme] || rawTheme.toLowerCase();
                         
-                        // Construct exact ID (e.g. "water_quack", "peely_holofoil")
                         const targetId = `${mappedName}_${mappedTheme}`;
 
                         if (validIds.has(targetId)) {
                             importedIds.push(targetId);
                         } else if (typeof baseSprites !== 'undefined') {
-                            // Fallback lookup in baseSprites array
                             const found = baseSprites.find(s => {
                                 const sId = cleanStr(String(s.id || ''));
                                 return sId.includes(mappedName) && sId.includes(mappedTheme);
