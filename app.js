@@ -1585,7 +1585,7 @@ if (importDiscordBtn) {
             'GALAXY': 'galaxy',
             'GEM': 'gem',
             'HOLOFOIL': 'holofoil',
-            'CUBE': 'cube',
+            'CUBE': 'rift', // Correctly targets the _rift prefix used for Cubes
             'QUACK': 'quack'
         };
 
@@ -1622,8 +1622,8 @@ if (importDiscordBtn) {
         const importedIds = [];
         const validIds = getSpriteIdSet();
 
-        // Parse row names and status cells
-        const rowRegex = /([^|\r\n]+?)\s*\|((?:\s*[✅👻❌🚫]\s*\|)+)/g;
+        // The 'u' flag at the end correctly parses 2-byte emojis like 🚫 and 👻
+        const rowRegex = /([^|\r\n]+?)\s*\|((?:\s*[✅👻❌🚫]\s*\|)+)/gu;
         let match;
 
         while ((match = rowRegex.exec(text)) !== null) {
@@ -1651,7 +1651,7 @@ if (importDiscordBtn) {
                         const rawTheme = defaultThemes[idx];
                         const mappedTheme = themeMap[rawTheme] || rawTheme.toLowerCase();
                         
-                        // Construct exact ID (e.g. "water_quack", "earth_cube", "peely_holofoil")
+                        // Construct exact ID (e.g. "water_quack", "peely_holofoil")
                         const targetId = `${mappedName}_${mappedTheme}`;
 
                         if (validIds.has(targetId)) {
