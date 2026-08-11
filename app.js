@@ -18,7 +18,7 @@ const KEYS = {
 
 const THEME_ORDER = ['Basic', 'Gold', 'Candy', 'Galaxy', 'Gem', 'Holofoil', 'Cube', 'Rift', 'Quack'];
 const RARITY_ORDER = ['Mythic', 'Legendary', 'Epic', 'Rare', 'Special'];
-const STATUS_FILTERS = ['all', 'owned', 'missing'];
+const STATUS_FILTERS = ['all', 'owned', 'missing', 'unmastered'];
 const SORT_METHODS = ['theme', 'sprite', 'name', 'rarity'];
 const UI_THEME_LABELS = { Candy: 'Gummy' };
 const EXPORT_THEME_LABELS = { Basic: 'NORMAL', Candy: 'GUMMY' };
